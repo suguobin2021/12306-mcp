@@ -13,7 +13,10 @@
     "prepare": "npm run build",
     "test": "tsc && node ./build/index.js",
     "test:http": "tsc && node ./build/index.js --port 8080",
-    "debug": "tsc && npx @modelcontextprotocol/inspector node ./build/index.js"
+    "debug": "tsc && npx @modelcontextprotocol/inspector node ./build/index.js",
+    "ticket-locker": "node ./build/ticket-locker-cli.js",
+    "ticket-locker:selftest": "node ./build/ticket-locker-selftest.js",
+    "ticket-locker:login": "node ./build/ticket-locker-login.js"
   },
   "keywords": [
     "mcp",
@@ -26,10 +29,12 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.19.0",
+    "axios-cookiejar-support": "^7.0.0",
     "commander": "^14.0.3",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
     "mcp-http-server": "^1.2.4",
+    "tough-cookie": "^6.0.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {

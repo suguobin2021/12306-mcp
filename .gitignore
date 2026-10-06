@@ -136,3 +136,8 @@ dist
 .pnp.*
 
 .vscode/
+# ticket-locker local runtime state
+.ticket-locker/
+ticket-plan-*.json
+*.armed.json
+*.session.json
