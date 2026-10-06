@@ -88,3 +88,65 @@ Next integration step:
 - official direct-order submission adapter
 - official interline-order submission adapter
 - queue polling and locked-order detection
+
+## Atomic interline rule
+
+Interline AUTO_LOCK is only eligible when every leg has the same purchasable
+seat type. Mixed-seat plans such as "leg 1 second class + leg 2 standing"
+are excluded from executable candidates. This mirrors the single seat-type
+parameter used by the 12306 interline queue and prevents half-executable
+plans from being offered for atomic locking.
+
+The interline adapter uses the 12306 LC flow:
+
+- lcQuery/submitOrderRequest
+- lcConfirmPassenger/initLc
+- lcConfirmPassenger/checkOrderInfo
+- lcConfirmPassenger/getQueueCount
+- lcConfirmPassenger/confirmLCForQueue
+- confirmPassenger/queryOrderWaitTime with tourFlag=lc
+
+An orderId returned by the LC queue is treated as the lock boundary and all
+lower-priority plans stop.
+
+## Dormant mode
+
+Ticket Locker is intentionally not a resident service.
+
+Wake only when needed:
+
+    npm run ticket-locker:wake
+
+Return to zero resident Ticket Locker processes:
+
+    npm run ticket-locker:sleep
+
+Sleep also removes the local QR/session artifacts so a later use starts with
+a fresh official 12306 login. Source code, tests, and frozen manifests on disk
+do not consume resident RAM.
+
+## Execution gate
+
+Actual queue submission requires all of the following:
+
+1. A previously generated plan manifest.
+2. An explicit arm manifest containing only user-selected plan IDs.
+3. A logged-in local 12306 QR session.
+4. Explicit execution argument:
+   --permit ARMED_USER_APPROVED
+5. Explicit passenger indexes.
+
+No plan outside the arm manifest can submit.
+
+## Validation boundary
+
+As of this revision, planner queries, wake/sleep lifecycle, TypeScript builds,
+direct-order parsing/payload logic, interline secret decoding/payload logic,
+priority serialization, queue-stop, lock-stop, and authorization gates have
+passed local tests.
+
+No real ticket order was created during development. Therefore the first
+future live use must perform an authenticated preflight against the then-current
+12306 interface before enabling queue submission. If 12306 requires CAPTCHA,
+identity verification, device verification, or other human verification,
+automation stops and hands control to the user rather than bypassing it.

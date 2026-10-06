@@ -23,10 +23,7 @@ function chooseSeat(seats, seatPriority) {
     }
     return available.sort((a, b) => a.price - b.price)[0];
 }
-function legFromTicket(leg, seatPriority) {
-    const seat = chooseSeat(leg.prices ?? [], seatPriority);
-    if (!seat)
-        return undefined;
+function planLegFromSeat(leg, seat) {
     return {
         trainCode: leg.start_train_code,
         from: leg.from_station,
@@ -42,6 +39,51 @@ function legFromTicket(leg, seatPriority) {
         availability: seat.num,
         price: Number(seat.price ?? 0),
     };
+}
+function legFromTicket(leg, seatPriority) {
+    const seat = chooseSeat(leg.prices ?? [], seatPriority);
+    return seat ? planLegFromSeat(leg, seat) : undefined;
+}
+function chooseCommonInterlineSeats(legs, seatPriority) {
+    if (legs.length < 2)
+        return undefined;
+    const availableByLeg = legs.map((leg) => (leg.prices ?? []).filter((seat) => hasInventory(seat.num)));
+    if (availableByLeg.some((seats) => seats.length === 0)) {
+        return undefined;
+    }
+    const commonCodes = new Set(availableByLeg[0]
+        .map((seat) => seat.seat_type_code)
+        .filter((code) => availableByLeg
+        .slice(1)
+        .every((seats) => seats.some((seat) => seat.seat_type_code === code))));
+    if (commonCodes.size === 0)
+        return undefined;
+    let selectedCode;
+    for (const preferred of seatPriority) {
+        const match = availableByLeg[0].find((seat) => commonCodes.has(seat.seat_type_code) &&
+            (seat.seat_name === preferred || seat.short === preferred));
+        if (match) {
+            selectedCode = match.seat_type_code;
+            break;
+        }
+    }
+    if (!selectedCode) {
+        selectedCode = [...commonCodes]
+            .map((code) => ({
+            code,
+            total: availableByLeg.reduce((sum, seats) => {
+                const seat = seats.find((candidate) => candidate.seat_type_code === code);
+                return sum + Number(seat?.price ?? Number.MAX_SAFE_INTEGER);
+            }, 0),
+        }))
+            .sort((a, b) => a.total - b.total)[0]?.code;
+    }
+    if (!selectedCode)
+        return undefined;
+    const selected = availableByLeg.map((seats) => seats.find((seat) => seat.seat_type_code === selectedCode));
+    if (selected.some((seat) => !seat))
+        return undefined;
+    return selected;
 }
 function planScore(durationMinutes, totalPrice) {
     // V1 ranking: 1 minute ~= 0.8 yuan. Explicit and deterministic, not hidden ML.
@@ -72,12 +114,10 @@ export function buildDirectPlans(rows, seatPriority) {
 export function buildInterlinePlans(rows, seatPriority) {
     return rows
         .map((row) => {
-        const legs = row.ticketList
-            .map((leg) => legFromTicket(leg, seatPriority))
-            .filter((x) => x !== undefined);
-        if (legs.length !== row.ticketList.length || legs.length < 2) {
+        const commonSeats = chooseCommonInterlineSeats(row.ticketList, seatPriority);
+        if (!commonSeats)
             return undefined;
-        }
+        const legs = row.ticketList.map((leg, index) => planLegFromSeat(leg, commonSeats[index]));
         const durationMinutes = parseDuration(row.lishi);
         const totalPrice = legs.reduce((sum, leg) => sum + leg.price, 0);
         return {

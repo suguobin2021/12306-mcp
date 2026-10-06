@@ -16,7 +16,12 @@
     "debug": "tsc && npx @modelcontextprotocol/inspector node ./build/index.js",
     "ticket-locker": "node ./build/ticket-locker-cli.js",
     "ticket-locker:selftest": "node ./build/ticket-locker-selftest.js",
-    "ticket-locker:login": "node ./build/ticket-locker-login.js"
+    "ticket-locker:login": "node ./build/ticket-locker-login.js",
+    "ticket-locker:execute": "node ./build/ticket-locker-execute.js",
+    "ticket-locker:direct-selftest": "node ./build/booking-direct-selftest.js",
+    "ticket-locker:interline-selftest": "node ./build/booking-interline-selftest.js",
+    "ticket-locker:wake": "bash ./scripts/ticket-locker-wake.sh",
+    "ticket-locker:sleep": "bash ./scripts/ticket-locker-sleep.sh"
   },
   "keywords": [
     "mcp",
